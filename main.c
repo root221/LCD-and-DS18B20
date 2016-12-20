@@ -2,20 +2,21 @@
 #include "stm32l476xx.h"
 #include "core_cm4.h"
 #include <string.h>
-//#include "onewire.h"
+#include "onewire.h"
 #define LCD_RSPin 1
 #define LCD_RWPin 5
 #define LCD_ENPin 6
 int timeout = 0;
-typedef struct {
-	GPIO_TypeDef* GPIOx;           /*!< GPIOx port to be used for I/O functions */
-	uint32_t GPIO_Pin;             /*!< GPIO Pin to be used for I/O functions */
-} OneWire_t;
+extern void delay(int s);
+//typedef struct {
+//	GPIO_TypeDef* GPIOx;           /*!< GPIOx port to be used for I/O functions */
+//	uint32_t GPIO_Pin;             /*!< GPIO Pin to be used for I/O functions */
+//} OneWire_t;
 void systick_init(){
 	SysTick->CTRL |= SysTick_CTRL_ENABLE_Msk;
 	SysTick->CTRL |= SysTick_CTRL_TICKINT_Msk;
 	SysTick->CTRL |= SysTick_CTRL_CLKSOURCE_Msk;
-	SysTick->LOAD = (uint32_t) 3000000;
+	SysTick->LOAD = (uint32_t) 6000000;
 }
 void system_clock_config(){
 		// 10M Hz
@@ -24,11 +25,11 @@ void system_clock_config(){
 		while((RCC->CR & RCC_CR_PLLRDY) > 0);
 		RCC->PLLCFGR &= 0xf9ff808f;
 		RCC->PLLCFGR |= 2; //set clock source
-		RCC->PLLCFGR |= RCC_PLLCFGR_PLLN_0;
-		RCC->PLLCFGR |= RCC_PLLCFGR_PLLN_1;
 		RCC->PLLCFGR |= RCC_PLLCFGR_PLLN_2;
 		RCC->PLLCFGR |= RCC_PLLCFGR_PLLN_3;
-		RCC->PLLCFGR |= RCC_PLLCFGR_PLLM_1;
+        RCC->PLLCFGR |= RCC_PLLCFGR_PLLN_4;
+		RCC->PLLCFGR |= RCC_PLLCFGR_PLLN_5;
+        RCC->PLLCFGR |= RCC_PLLCFGR_PLLM_1;
 		RCC->PLLCFGR |= RCC_PLLCFGR_PLLR_0;
 		RCC->PLLCFGR |= RCC_PLLCFGR_PLLR_1;
 		RCC->CR |= RCC_CR_PLLON;
@@ -52,13 +53,13 @@ void GPIO_init(){
 	GPIOA->OTYPER = 0;
 	//GPIOB->ODR = 0xff;
 }
-
-void wait(int microsec){
+/*
+void delay(int microsec){
     SysTick->CTRL |= SysTick_CTRL_ENABLE_Msk;
 	SysTick->LOAD = (uint32_t) 3000000;
     timeout = 0;
     while(!timeout); 
-}
+}*/
 int write_to_LCD(int input,int is_cmd){
     if(is_cmd==1)
     		GPIOA->BRR |= 1 <<(LCD_RSPin );
@@ -71,6 +72,13 @@ int write_to_LCD(int input,int is_cmd){
     	wait();
     	GPIOA->BRR |= 1<< (LCD_ENPin);
     	wait();
+}
+int wait(){
+	int k=0;
+	for(int i=0;i<55000;i++){
+		k++;
+	}
+	return 1;
 }
 int offset = 16;
 int addr=0;
@@ -143,7 +151,7 @@ void EXTI13_IRQHandler(void){
         
 	}
 	else{
-		write_to_LCD(0x01,1);
+		//write_to_LCD(0x01,1);
 
 		mode = 1;
 	}
@@ -162,100 +170,14 @@ void write_str_to_LCD(){
 	write_to_LCD(0x80,1);
 
 }
-void OneWire_Init(OneWire_t* OneWireStruct, GPIO_TypeDef* GPIOx, uint32_t GPIO_Pin) {
-	GPIOx->PUPDR |= 1 << (GPIO_Pin * 2); // set pull up
-    GPIOx->MODER = 0;                       // set input mode
-    OneWireStruct->GPIOx = GPIOx;
-    OneWireStruct->GPIO_Pin = GPIO_Pin;
-}
-
-/* Send reset through OneWireStruct
- * Please implement the reset protocol
- * param:
- *   OneWireStruct: wire to send
- * retval:
- *    0 -> Reset OK
- *    1 -> Reset Failed
- */
-uint8_t OneWire_Reset(OneWire_t* OneWireStruct) {
-    OneWireStruct->GPIOx->MODER |= 1 << (OneWireStruct->GPIO_Pin * 2);    //set to output mode
-    OneWireStruct->GPIOx->BRR |= 1 << (OneWireStruct->GPIO_Pin); //pull down 
-    wait(480);
-    OneWireStruct->GPIOx->MODER = 0;    // set to input mode
-    wait(60);
-    if(OneWireStruct->GPIOx->IDR  & (1 << (OneWireStruct->GPIO_Pin)))
-        return 0;
-    else
-        return 1;
-}
-
-/* Write 1 bit through OneWireStruct
- * Please implement the send 1-bit protocol
- * param:
- *   OneWireStruct: wire to send
- *   bit: bit to send
- */
-void OneWire_WriteBit(OneWire_t* OneWireStruct, uint8_t bit) {
-    wait(1);
-    if(bit == 1){
-        OneWireStruct->GPIOx->MODER |= 1 << (OneWireStruct->GPIO_Pin * 2);    //set to output mode
-        OneWireStruct->GPIOx->BRR |= 1 << (OneWireStruct->GPIO_Pin); //pull down 
-        wait(15);
-        OneWireStruct->GPIOx->MODER = 0;    // set to input mode
-        wait(45);
-    }
-    
-    else{
-        OneWireStruct->GPIOx->MODER |= 1 << (OneWireStruct->GPIO_Pin * 2);    //set to output mode
-        OneWireStruct->GPIOx->BRR |= 1 << (OneWireStruct->GPIO_Pin); //pull down 
-        wait(60):    
-    }
-    wait(410);
-}
-
-/* Read 1 bit through OneWireStruct
- * Please implement the read 1-bit protocol
- * param:
- *   OneWireStruct: wire to read from
- */
-uint8_t OneWire_ReadBit(OneWire_t* OneWireStruct) {
-    wait(1);
-    
-}
-
-
-/* A convenient API to write 1 byte through OneWireStruct
- * Please use OneWire_WriteBit to implement
- * param:
- *   OneWireStruct: wire to send
- *   byte: byte to send
- */
-void OneWire_WriteByte(OneWire_t* OneWireStruct, uint8_t byte) {
-	// TODO
-}
-
-/* A convenient API to read 1 byte through OneWireStruct
- * Please use OneWire_ReadBit to implement
- * param:
- *   OneWireStruct: wire to read from
- */
-uint8_t OneWire_ReadByte(OneWire_t* OneWireStruct) {
-	// TODO
-}
-
-/* Send ROM Command, Skip ROM, through OneWireStruct
- * You can use OneWire_WriteByte to implement
- */
-void OneWire_SkipROM(OneWire_t* OneWireStruct) {
-	// TODO
-}
 
 int main(){
 	s_len = strlen(str);
 	system_clock_config();
 	GPIO_init();
+
 	init_LCD();
-	systick_init();
+	//systick_init();
 	EXTI_Setup();
 	write_to_LCD(0x40,1); //set CG RAM 0100 0000
 
@@ -267,9 +189,17 @@ int main(){
 	write_to_LCD(0x00,0); // 0001 1011
 	write_to_LCD(0x04,0); //0000 1110
 	write_to_LCD(0x00,0);
-	//OneWire_t one_wire;
-	//OneWire_Init(&one_wire, GPIOA, 7);
-
-
+	OneWire_t one_wire;
+	OneWire_Init(&one_wire, GPIOD, 2);
+	int b = OneWire_Reset(&one_wire);
+	OneWire_SkipROM(&one_wire);
+	DS18B20_ConvT(&one_wire);
+	delay(93750);
+	int a;
+	OneWire_Init(&one_wire, GPIOD, 2);
+	int c = OneWire_Reset(&one_wire);
+	OneWire_SkipROM(&one_wire);
+	DS18B20_Read(&one_wire,&a);
+	int k=0;
 }
 
