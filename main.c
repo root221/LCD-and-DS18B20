@@ -194,7 +194,9 @@ int main(){
 	int b = OneWire_Reset(&one_wire);
 	OneWire_SkipROM(&one_wire);
 	DS18B20_ConvT(&one_wire);
+	int d = OneWire_ReadBit(&one_wire);
 	delay(93750);
+	int e = OneWire_ReadBit(&one_wire);
 	int a;
 	OneWire_Init(&one_wire, GPIOD, 2);
 	int c = OneWire_Reset(&one_wire);
