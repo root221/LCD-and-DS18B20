@@ -6,17 +6,15 @@
 #define LCD_RSPin 1
 #define LCD_RWPin 5
 #define LCD_ENPin 6
-int timeout = 0;
+OneWire_t one_wire;
+int systick_count = 0;
 extern void delay(int s);
-//typedef struct {
-//	GPIO_TypeDef* GPIOx;           /*!< GPIOx port to be used for I/O functions */
-//	uint32_t GPIO_Pin;             /*!< GPIO Pin to be used for I/O functions */
-//} OneWire_t;
+
 void systick_init(){
 	SysTick->CTRL |= SysTick_CTRL_ENABLE_Msk;
 	SysTick->CTRL |= SysTick_CTRL_TICKINT_Msk;
 	SysTick->CTRL |= SysTick_CTRL_CLKSOURCE_Msk;
-	SysTick->LOAD = (uint32_t) 6000000;
+	SysTick->LOAD = (uint32_t) 4000000;
 }
 void system_clock_config(){
 		// 10M Hz
@@ -39,7 +37,7 @@ void system_clock_config(){
 }
 void GPIO_init(){
 	RCC->AHB2ENR = RCC->AHB2ENR | 0xf;
-	/*
+
 	GPIOC->MODER = (GPIOC->MODER & 0xf3ffffff);
 
 	GPIOB->MODER =  (GPIOB->MODER & 0xffff0000) |0x5555 ;
@@ -52,16 +50,10 @@ void GPIO_init(){
 	GPIOA->OSPEEDR = (GPIOA->OSPEEDR & 0xffff0000) | 0x5555;
 	GPIOA->OTYPER = 0;
 	//GPIOB->ODR = 0xff;
-	 * */
+
 
 }
-/*
-void delay(int microsec){
-    SysTick->CTRL |= SysTick_CTRL_ENABLE_Msk;
-	SysTick->LOAD = (uint32_t) 3000000;
-    timeout = 0;
-    while(!timeout); 
-}*/
+
 int write_to_LCD(int input,int is_cmd){
     if(is_cmd==1)
     		GPIOA->BRR |= 1 <<(LCD_RSPin );
@@ -77,53 +69,69 @@ int write_to_LCD(int input,int is_cmd){
 }
 int wait(){
 	int k=0;
-	for(int i=0;i<55000;i++){
+	for(int i=0;i<50000;i++){
 		k++;
 	}
 	return 1;
 }
-int offset = 16;
 int addr=0;
-int Array[16]={0x34,0x37,0x20,0x20,0x20,0x20,0x20,0x20,0x20,0x20,0x20,0x20,0x20,0x20,0x20,0x20};
 int prefix = 0x80;
 int t_prefix = 0xC0;
 int counter = 0;
 int mode = 1;
-char str[] = "This is a test";
-int s_len;
 int count;
 void SysTick_Handler(void){
+	systick_count++;
 	if(mode == 1){
-	if(counter >= 16){
-		prefix = 0xC0;
-		t_prefix = 0x80;
-	}
-	else{
-		prefix = 0x80;
-		t_prefix = 0xC0;
-	}
-	if(addr == 14){
-		write_to_LCD(prefix + addr,1);
-		write_to_LCD(0x20,0);
-		write_to_LCD(0,0);
-		//write_to_LCD(t_prefix ,1);
-		//write_to_LCD(0x37,0);
-	}
-	else{
-		write_to_LCD(prefix + addr,1);
-		write_to_LCD(0x20,0);
-		write_to_LCD(0x0,0);
-		//write_to_LCD(0x37,0);
-	}
-	addr++;
-	addr%=16;
-	counter++;
-	counter%=32;
-	write_to_LCD(0x02,1);
-	}
-	else{
-        timeout = 1;
+		if(systick_count < 3)
+			return;
+		systick_count = 0;
+		if(counter >= 16){
+			prefix = 0xC0;
+			t_prefix = 0x80;
+		}
+		else{
+			prefix = 0x80;
+			t_prefix = 0xC0;
+		}
+		if(addr == 14){
+			write_to_LCD(prefix + addr,1);
+			write_to_LCD(0x20,0);
+			//write_to_LCD(0x34,0);
+			write_to_LCD(0,0);
+			write_to_LCD(t_prefix ,1);
+			//write_to_LCD(0x37,0);
+			write_to_LCD(0x01,0);
+		}
+		else if(addr == 15){
+			write_to_LCD(prefix + addr,1);
+			write_to_LCD(0x20,0);
+			write_to_LCD(t_prefix ,1);
+			//write_to_LCD(0x34,0);
+			write_to_LCD(0,0);
+			//write_to_LCD(0x37,0);
+			write_to_LCD(0x01,0);
+		}
 
+		else{
+			write_to_LCD(prefix + addr,1);
+			write_to_LCD(0x20,0);
+			write_to_LCD(0x0,0);
+			write_to_LCD(0x01,0);
+			//write_to_LCD(0x34,0);
+			//write_to_LCD(0x37,0);
+		}
+		addr++;
+		addr%=16;
+		counter++;
+		counter%=32;
+		write_to_LCD(0x02,1);
+	}
+	else{
+		if(systick_count < 2)
+			return;
+		systick_count = 0;
+		get_temp();
 	}
 }
 void init_LCD(){
@@ -146,16 +154,17 @@ void EXTI_Setup(){
 }
 
 void EXTI13_IRQHandler(void){
-	//debounce();
-	int press = GPIOC->IDR;
+	debounce();
+
 	if(mode == 1){
         mode = 2;
-        
+        write_to_LCD(0x01,1);
+        	get_temp();
 	}
 	else{
 		//write_to_LCD(0x01,1);
-
 		mode = 1;
+		write_to_LCD(0x01,1);
 	}
 	EXTI->PR1 |= 1 << 13; //clear pending
 }
@@ -166,42 +175,73 @@ void debounce(){
 	}
 }
 
-void write_str_to_LCD(){
-	write_to_LCD(0x01,1); //clear display
-	count = 0;
-	write_to_LCD(0x80,1);
 
+
+void display(int temp){
+	temp *= 625;
+	int c = 0;
+	write_to_LCD(0x80, 1);
+	int arr[12];
+	while(temp != 0){
+		if (c==4){
+			arr[c] =  0x2E;
+			c++;
+		}
+		arr[c] = 0x30 +(temp % 10);
+		c++;
+		temp /= 10;
+	}
+	for(int i=c-1;i>-1;i--){
+		write_to_LCD(arr[i], 0);
+	}
 }
-
-int main(){
-	system_clock_config();
-	GPIO_init();
-
-	init_LCD();
-	//systick_init();
-	EXTI_Setup();
-	write_to_LCD(0x40,1); //set CG RAM 0100 0000
-
-	write_to_LCD(0x04,0); //0000 0000
-	write_to_LCD(0x0E,0); // 0000 1110
-	write_to_LCD(0x0E,0); // 0001 0101
-	write_to_LCD(0x0E,0);   // 00001 1111
-	write_to_LCD(0x1F,0); // 0001 0101
-	write_to_LCD(0x00,0); // 0001 1011
-	write_to_LCD(0x04,0); //0000 1110
-	write_to_LCD(0x00,0);
-	OneWire_t one_wire;
-	OneWire_Init(&one_wire, GPIOC, 0);
+void get_temp(){
+	OneWire_Reset(&one_wire);
+	OneWire_SkipROM(&one_wire);
+	DS18B20_SetResolution(&one_wire, 11);
 	OneWire_Reset(&one_wire);
 	OneWire_SkipROM(&one_wire);
 	DS18B20_ConvT(&one_wire);
-	//while(!(OneWire_ReadBit(&one_wire))){}
 	delay(750000);
 	while(DS18B20_Done(&one_wire));
 	int temp;
 	OneWire_Reset(&one_wire);
 	OneWire_SkipROM(&one_wire);
 	DS18B20_Read(&one_wire,&temp);
-	int k=0;
+	display(temp);
+}
+
+
+int main(){
+	system_clock_config();
+	GPIO_init();
+
+	init_LCD();
+	EXTI_Setup();
+	// make symbol
+	write_to_LCD(0x40,1); //set CG RAM 0100 0000
+	write_to_LCD(0x04,0); //0000 0000
+	write_to_LCD(0x0E,0); // 0000 1110
+	write_to_LCD(0x0E,0); // 0001 0101
+	write_to_LCD(0x0E,0); // 00001 1111
+	write_to_LCD(0x1F,0); // 0001 0101
+	write_to_LCD(0x00,0); // 0001 1011
+	write_to_LCD(0x04,0); //0000 1110
+	write_to_LCD(0x00,0);
+
+	write_to_LCD(0x14,0); //0000 0000
+	write_to_LCD(0x03,0); // 0011 1110
+	write_to_LCD(0x1E,0); // 0001 0101
+	write_to_LCD(0x1F,0); // 00001 1111
+	write_to_LCD(0x07,0); // 0001 0101
+	write_to_LCD(0x0f,0); // 0001 1011
+	write_to_LCD(0x09,0); //0000 1110
+	write_to_LCD(0x09,0);
+
+	//
+	write_to_LCD(0x80,1);
+	OneWire_Init(&one_wire, GPIOC, 0);
+	systick_init();
+
 }
 

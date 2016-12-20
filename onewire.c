@@ -29,18 +29,8 @@ uint8_t OneWire_Reset(OneWire_t* OneWireStruct) {
     delay(490);
     OneWireStruct->GPIOx->MODER = 0;    // set to input mode
     delay(60);
-    while(((OneWireStruct->GPIOx->IDR >> OneWireStruct->GPIO_Pin) & 1)){
-    	/*
-    	if(){
-        delay(410);
-        return 0;
-    }
-    else{
-        delay(410);
-        return 1;
-    }
-    */
-    }
+    while(((OneWireStruct->GPIOx->IDR >> OneWireStruct->GPIO_Pin) & 1));
+
     delay(410);
     return 0;
 }

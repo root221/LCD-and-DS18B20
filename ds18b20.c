@@ -38,7 +38,28 @@ uint8_t DS18B20_Read(OneWire_t* OneWire, int *destination) {
  *    1 -> Error
  */
 uint8_t DS18B20_SetResolution(OneWire_t* OneWire, DS18B20_Resolution_t resolution) {
-    return 0;
+	int a = 0;
+	switch(resolution){
+	case 9:
+		a = 0x1f;
+		break;
+	case 10:
+		a = 0x3f;
+		break;
+	case 11:
+		a = 0x5f;
+		break;
+	case 12:
+		a = 0x7f;
+		break;
+	default:
+		break;
+	}
+	OneWire_WriteByte(OneWire, 0x4E);
+	OneWire_WriteByte(OneWire, 0x7F);
+	OneWire_WriteByte(OneWire, 0xFF);
+	OneWire_WriteByte(OneWire, a   );
+	return 0;
 }
 
 /* Check if the temperature conversion is done or not
