@@ -38,8 +38,8 @@ void system_clock_config(){
 		RCC->CFGR |= 15;
 }
 void GPIO_init(){
-	RCC->AHB2ENR = RCC->AHB2ENR | 0x7;
-
+	RCC->AHB2ENR = RCC->AHB2ENR | 0xf;
+	/*
 	GPIOC->MODER = (GPIOC->MODER & 0xf3ffffff);
 
 	GPIOB->MODER =  (GPIOB->MODER & 0xffff0000) |0x5555 ;
@@ -52,6 +52,8 @@ void GPIO_init(){
 	GPIOA->OSPEEDR = (GPIOA->OSPEEDR & 0xffff0000) | 0x5555;
 	GPIOA->OTYPER = 0;
 	//GPIOB->ODR = 0xff;
+	 * */
+
 }
 /*
 void delay(int microsec){
@@ -172,7 +174,6 @@ void write_str_to_LCD(){
 }
 
 int main(){
-	s_len = strlen(str);
 	system_clock_config();
 	GPIO_init();
 
@@ -190,15 +191,15 @@ int main(){
 	write_to_LCD(0x04,0); //0000 1110
 	write_to_LCD(0x00,0);
 	OneWire_t one_wire;
-	OneWire_Init(&one_wire, GPIOD, 2);
+	OneWire_Init(&one_wire, GPIOA, 7);
 	int b = OneWire_Reset(&one_wire);
 	OneWire_SkipROM(&one_wire);
 	DS18B20_ConvT(&one_wire);
+	//while(!(OneWire_ReadBit(&one_wire))){}
 	int d = OneWire_ReadBit(&one_wire);
-	delay(93750);
+	delay(1000000);
 	int e = OneWire_ReadBit(&one_wire);
 	int a;
-	OneWire_Init(&one_wire, GPIOD, 2);
 	int c = OneWire_Reset(&one_wire);
 	OneWire_SkipROM(&one_wire);
 	DS18B20_Read(&one_wire,&a);

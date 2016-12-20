@@ -7,6 +7,7 @@
  *   GPIO_Pin: The pin GPIO DQ used, e.g. 5
  */
 void OneWire_Init(OneWire_t* OneWireStruct, GPIO_TypeDef* GPIOx, uint32_t GPIO_Pin) {
+	GPIOx->PUPDR = 0;
 	GPIOx->PUPDR |= 1 << (GPIO_Pin * 2); // set pull up
     GPIOx->MODER = 0;                       // set input mode
     OneWireStruct->GPIOx = GPIOx;
@@ -23,11 +24,14 @@ void OneWire_Init(OneWire_t* OneWireStruct, GPIO_TypeDef* GPIOx, uint32_t GPIO_P
  */
 uint8_t OneWire_Reset(OneWire_t* OneWireStruct) {
     OneWireStruct->GPIOx->BRR |= 1 << (OneWireStruct->GPIO_Pin); //pull down
-    OneWireStruct->GPIOx->MODER |= 1 << (OneWireStruct->GPIO_Pin * 2);    //set to output mode
-    delay(480);
     OneWireStruct->GPIOx->MODER = 0;    // set to input mode
-    delay(60);
-    if((OneWireStruct->GPIOx->IDR >> OneWireStruct->GPIO_Pin) & 1){
+    OneWireStruct->GPIOx->MODER |= 1 << (OneWireStruct->GPIO_Pin * 2);    //set to output mode
+    delay(490);
+    OneWireStruct->GPIOx->MODER = 0;    // set to input mode
+    delay(65);
+    while(((OneWireStruct->GPIOx->IDR >> OneWireStruct->GPIO_Pin) & 1)){
+    	/*
+    	if(){
         delay(410);
         return 0;
     }
@@ -35,6 +39,10 @@ uint8_t OneWire_Reset(OneWire_t* OneWireStruct) {
         delay(410);
         return 1;
     }
+    */
+    }
+    delay(410);
+    return 0;
 }
 
 /* Write 1 bit through OneWireStruct
@@ -49,9 +57,9 @@ void OneWire_WriteBit(OneWire_t* OneWireStruct, uint8_t bit) {
     if(bit == 1){
         OneWireStruct->GPIOx->BRR |= 1 << (OneWireStruct->GPIO_Pin); //pull down
         OneWireStruct->GPIOx->MODER |= 1 << (OneWireStruct->GPIO_Pin * 2);    //set to output mode
-        delay(15);
+        delay(5);
         OneWireStruct->GPIOx->MODER = 0;    // set to input mode
-        delay(45);
+        delay(55);
     }
 
     else{
@@ -71,9 +79,9 @@ uint8_t OneWire_ReadBit(OneWire_t* OneWireStruct) {
     int value;
     int bit;
     delay(1);
-    OneWireStruct->GPIOx->MODER |= 1 << (OneWireStruct->GPIO_Pin * 2);    //set to output mode
     OneWireStruct->GPIOx->BRR |= 1 << (OneWireStruct->GPIO_Pin); //pull down
-    delay(1);
+    OneWireStruct->GPIOx->MODER |= 1 << (OneWireStruct->GPIO_Pin * 2);    //set to output mode
+    delay(5);
     OneWireStruct->GPIOx->MODER = 0;    // set to input mode
     value = OneWireStruct->GPIOx->IDR;
     bit = (value >> OneWireStruct->GPIO_Pin) & 1;
@@ -113,6 +121,5 @@ uint8_t OneWire_ReadByte(OneWire_t* OneWireStruct) {
  * You can use OneWire_WriteByte to implement
  */
 void OneWire_SkipROM(OneWire_t* OneWireStruct) {
-	OneWire_WriteByte(OneWireStruct,0xC);// write 0xCC
-	OneWire_WriteByte(OneWireStruct,0xC);
+	OneWire_WriteByte(OneWireStruct,0xCC);// write 0xCC
 }
