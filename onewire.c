@@ -28,7 +28,7 @@ uint8_t OneWire_Reset(OneWire_t* OneWireStruct) {
     OneWireStruct->GPIOx->MODER |= 1 << (OneWireStruct->GPIO_Pin * 2);    //set to output mode
     delay(490);
     OneWireStruct->GPIOx->MODER = 0;    // set to input mode
-    delay(65);
+    delay(60);
     while(((OneWireStruct->GPIOx->IDR >> OneWireStruct->GPIO_Pin) & 1)){
     	/*
     	if(){
@@ -79,6 +79,7 @@ uint8_t OneWire_ReadBit(OneWire_t* OneWireStruct) {
     int value;
     int bit;
     delay(1);
+    OneWireStruct->GPIOx->MODER = 0;
     OneWireStruct->GPIOx->BRR |= 1 << (OneWireStruct->GPIO_Pin); //pull down
     OneWireStruct->GPIOx->MODER |= 1 << (OneWireStruct->GPIO_Pin * 2);    //set to output mode
     delay(5);
@@ -112,9 +113,11 @@ void OneWire_WriteByte(OneWire_t* OneWireStruct, uint8_t byte) {
 uint8_t OneWire_ReadByte(OneWire_t* OneWireStruct) {
 	uint8_t value = 0;
 	for(int i=0;i<8;i++){
-		value <<= 1;
-		value |= OneWire_ReadBit(OneWireStruct);
+		value >>= 1;
+		if(OneWire_ReadBit(OneWireStruct))
+			value |= 0x80;
 	}
+	return value;
 }
 
 /* Send ROM Command, Skip ROM, through OneWireStruct

@@ -191,18 +191,17 @@ int main(){
 	write_to_LCD(0x04,0); //0000 1110
 	write_to_LCD(0x00,0);
 	OneWire_t one_wire;
-	OneWire_Init(&one_wire, GPIOA, 7);
-	int b = OneWire_Reset(&one_wire);
+	OneWire_Init(&one_wire, GPIOC, 0);
+	OneWire_Reset(&one_wire);
 	OneWire_SkipROM(&one_wire);
 	DS18B20_ConvT(&one_wire);
 	//while(!(OneWire_ReadBit(&one_wire))){}
-	int d = OneWire_ReadBit(&one_wire);
-	delay(1000000);
-	int e = OneWire_ReadBit(&one_wire);
-	int a;
-	int c = OneWire_Reset(&one_wire);
+	delay(750000);
+	while(DS18B20_Done(&one_wire));
+	int temp;
+	OneWire_Reset(&one_wire);
 	OneWire_SkipROM(&one_wire);
-	DS18B20_Read(&one_wire,&a);
+	DS18B20_Read(&one_wire,&temp);
 	int k=0;
 }
 

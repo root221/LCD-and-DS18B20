@@ -23,10 +23,9 @@ int DS18B20_ConvT(OneWire_t* OneWire, DS18B20_Resolution_t resolution) {
  */
 uint8_t DS18B20_Read(OneWire_t* OneWire, int *destination) {
 	OneWire_WriteByte(OneWire, 0xBE);
-	*destination = OneWire_ReadByte(OneWire);
-	*destination = *destination << 8;
-	*destination |= OneWire_ReadByte(OneWire);
-
+	int lsb = OneWire_ReadByte(OneWire);
+	int msb = OneWire_ReadByte(OneWire);
+	*destination = (msb << 8) + lsb;
     return 0;
 }
 
@@ -50,6 +49,6 @@ uint8_t DS18B20_SetResolution(OneWire_t* OneWire, DS18B20_Resolution_t resolutio
  *    1 -> Not yet
  */
 uint8_t DS18B20_Done(OneWire_t* OneWire) {
-	// TODO
-	return 0;
+	return !OneWire_ReadBit(OneWire);
+
 }
