@@ -8,13 +8,15 @@
 #define LCD_ENPin 6
 OneWire_t one_wire;
 int systick_count = 0;
+int reso = 11;
+int reso_de[4] = {93750, 187500, 375000, 750000};
 extern void delay(int s);
 
 void systick_init(){
 	SysTick->CTRL |= SysTick_CTRL_ENABLE_Msk;
 	SysTick->CTRL |= SysTick_CTRL_TICKINT_Msk;
 	SysTick->CTRL |= SysTick_CTRL_CLKSOURCE_Msk;
-	SysTick->LOAD = (uint32_t) 4000000;
+	SysTick->LOAD = (uint32_t) 6000000;
 }
 void system_clock_config(){
 		// 10M Hz
@@ -83,7 +85,7 @@ int count;
 void SysTick_Handler(void){
 	systick_count++;
 	if(mode == 1){
-		if(systick_count < 3)
+		if(systick_count < 2)
 			return;
 		systick_count = 0;
 		if(counter >= 16){
@@ -128,7 +130,7 @@ void SysTick_Handler(void){
 		write_to_LCD(0x02,1);
 	}
 	else{
-		if(systick_count < 2)
+		if(systick_count < 4)
 			return;
 		systick_count = 0;
 		get_temp();
@@ -149,23 +151,23 @@ void EXTI_Setup(){
 	EXTI->IMR1 |= 1 << 13;
 	EXTI->RTSR1 = 1 << 13;
 	NVIC->ISER[1] |= 1 << 8;
-	NVIC_SetPriority(40,-1);
+	NVIC_SetPriority(40,-2);
 	NVIC_SetPriority(-1,10);
 }
 
 void EXTI13_IRQHandler(void){
-	debounce();
-
+	//debounce();
+	write_to_LCD(0x01,1);
 	if(mode == 1){
         mode = 2;
-        write_to_LCD(0x01,1);
-        	get_temp();
+        	//get_temp();
 	}
 	else{
 		//write_to_LCD(0x01,1);
 		mode = 1;
-		write_to_LCD(0x01,1);
+
 	}
+	write_to_LCD(0x01,1);
 	EXTI->PR1 |= 1 << 13; //clear pending
 }
 void debounce(){
@@ -180,6 +182,7 @@ void debounce(){
 void display(int temp){
 	temp *= 625;
 	int c = 0;
+	//write_to_LCD(0x01, 1);
 	write_to_LCD(0x80, 1);
 	int arr[12];
 	while(temp != 0){
@@ -198,11 +201,11 @@ void display(int temp){
 void get_temp(){
 	OneWire_Reset(&one_wire);
 	OneWire_SkipROM(&one_wire);
-	DS18B20_SetResolution(&one_wire, 11);
+	DS18B20_SetResolution(&one_wire, reso);
 	OneWire_Reset(&one_wire);
 	OneWire_SkipROM(&one_wire);
 	DS18B20_ConvT(&one_wire);
-	delay(750000);
+	delay(reso_de[reso-9]);
 	while(DS18B20_Done(&one_wire));
 	int temp;
 	OneWire_Reset(&one_wire);
@@ -240,7 +243,7 @@ int main(){
 
 	//
 	write_to_LCD(0x80,1);
-	OneWire_Init(&one_wire, GPIOC, 0);
+	OneWire_Init(&one_wire, GPIOD, 2);
 	systick_init();
 
 }
