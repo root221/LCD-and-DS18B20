@@ -51,8 +51,6 @@ void GPIO_init(){
 	GPIOA->PUPDR = (GPIOA->PUPDR & 0xffff0000) | 0xAAAA;
 	GPIOA->OSPEEDR = (GPIOA->OSPEEDR & 0xffff0000) | 0x5555;
 	GPIOA->OTYPER = 0;
-	//GPIOB->ODR = 0xff;
-
 
 }
 
@@ -62,7 +60,7 @@ int write_to_LCD(int input,int is_cmd){
     	else
     		GPIOA->BSRR |= 1 << (LCD_RSPin);
     	GPIOA->BRR |= 1 <<(LCD_RWPin);
-    GPIOB->BRR |= 0xff;
+	GPIOB->BRR |= 0xff;
     	GPIOB->BSRR |= input;
     	GPIOA->BSRR |= 1 << (LCD_ENPin);
     	wait();
@@ -99,19 +97,15 @@ void SysTick_Handler(void){
 		if(addr == 14){
 			write_to_LCD(prefix + addr,1);
 			write_to_LCD(0x20,0);
-			//write_to_LCD(0x34,0);
 			write_to_LCD(0,0);
 			write_to_LCD(t_prefix ,1);
-			//write_to_LCD(0x37,0);
 			write_to_LCD(0x01,0);
 		}
 		else if(addr == 15){
 			write_to_LCD(prefix + addr,1);
 			write_to_LCD(0x20,0);
 			write_to_LCD(t_prefix ,1);
-			//write_to_LCD(0x34,0);
 			write_to_LCD(0,0);
-			//write_to_LCD(0x37,0);
 			write_to_LCD(0x01,0);
 		}
 
@@ -120,8 +114,6 @@ void SysTick_Handler(void){
 			write_to_LCD(0x20,0);
 			write_to_LCD(0x0,0);
 			write_to_LCD(0x01,0);
-			//write_to_LCD(0x34,0);
-			//write_to_LCD(0x37,0);
 		}
 		addr++;
 		addr%=16;
@@ -144,7 +136,6 @@ void init_LCD(){
 	write_to_LCD(0x80,1);//MOVE to top left 0000 0010
 }
 void EXTI_Setup(){
-
 	RCC->APB2ENR |= 0x1;
 	SYSCFG->EXTICR[3] = 0 ;
 	SYSCFG->EXTICR[3] |= (uint32_t) 0x20 ;// PC13
@@ -156,16 +147,12 @@ void EXTI_Setup(){
 }
 
 void EXTI13_IRQHandler(void){
-	//debounce();
 	write_to_LCD(0x01,1);
 	if(mode == 1){
         mode = 2;
-        	//get_temp();
 	}
 	else{
-		//write_to_LCD(0x01,1);
 		mode = 1;
-
 	}
 	write_to_LCD(0x01,1);
 	EXTI->PR1 |= 1 << 13; //clear pending
@@ -177,12 +164,9 @@ void debounce(){
 	}
 }
 
-
-
 void display(int temp){
 	temp *= 625;
 	int c = 0;
-	//write_to_LCD(0x01, 1);
 	write_to_LCD(0x80, 1);
 	int arr[12];
 	while(temp != 0){
