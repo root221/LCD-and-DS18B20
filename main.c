@@ -2,14 +2,13 @@
 #include "stm32l476xx.h"
 #include "core_cm4.h"
 #include <string.h>
-#include "onewire.h"
+
 #define LCD_RSPin 1
 #define LCD_RWPin 5
 #define LCD_ENPin 6
-OneWire_t one_wire;
+
 int systick_count = 0;
-int reso = 11;
-int reso_de[4] = {93750, 187500, 375000, 750000};
+
 extern void delay(int s);
 
 void systick_init(){
@@ -39,6 +38,7 @@ void system_clock_config(){
 }
 void GPIO_init(){
 	RCC->AHB2ENR = RCC->AHB2ENR | 0xf;
+<<<<<<< Updated upstream
 
 	GPIOC->MODER = (GPIOC->MODER & 0xf3ffffff);
 
@@ -74,6 +74,13 @@ int wait(){
 	}
 	return 1;
 }
+=======
+	GPIOC->MODER = (GPIOC->MODER & 0xf3fffff0) | 0xA;
+	GPIOC->AFR[0] = (GPIOC->AFR[0] & 0xffffff00) | 0x77;
+}
+
+
+>>>>>>> Stashed changes
 int addr=0;
 int prefix = 0x80;
 int t_prefix = 0xC0;
@@ -81,6 +88,7 @@ int counter = 0;
 int mode = 1;
 int count;
 void SysTick_Handler(void){
+<<<<<<< Updated upstream
 	systick_count++;
 	if(mode == 1){
 		if(systick_count < 2)
@@ -134,7 +142,11 @@ void init_LCD(){
 	write_to_LCD(0x0c,1); //display on  00001110
 	write_to_LCD(0x01,1);//clear screen  00000001
 	write_to_LCD(0x80,1);//MOVE to top left 0000 0010
+=======
+
+>>>>>>> Stashed changes
 }
+
 void EXTI_Setup(){
 	RCC->APB2ENR |= 0x1;
 	SYSCFG->EXTICR[3] = 0 ;
@@ -147,6 +159,7 @@ void EXTI_Setup(){
 }
 
 void EXTI13_IRQHandler(void){
+<<<<<<< Updated upstream
 	write_to_LCD(0x01,1);
 	if(mode == 1){
         mode = 2;
@@ -155,6 +168,9 @@ void EXTI13_IRQHandler(void){
 		mode = 1;
 	}
 	write_to_LCD(0x01,1);
+=======
+
+>>>>>>> Stashed changes
 	EXTI->PR1 |= 1 << 13; //clear pending
 }
 void debounce(){
@@ -164,6 +180,7 @@ void debounce(){
 	}
 }
 
+<<<<<<< Updated upstream
 void display(int temp){
 	temp *= 625;
 	int c = 0;
@@ -181,54 +198,36 @@ void display(int temp){
 	for(int i=c-1;i>-1;i--){
 		write_to_LCD(arr[i], 0);
 	}
-}
-void get_temp(){
-	OneWire_Reset(&one_wire);
-	OneWire_SkipROM(&one_wire);
-	DS18B20_SetResolution(&one_wire, reso);
-	OneWire_Reset(&one_wire);
-	OneWire_SkipROM(&one_wire);
-	DS18B20_ConvT(&one_wire);
-	delay(reso_de[reso-9]);
-	while(DS18B20_Done(&one_wire));
-	int temp;
-	OneWire_Reset(&one_wire);
-	OneWire_SkipROM(&one_wire);
-	DS18B20_Read(&one_wire,&temp);
-	display(temp);
-}
+=======
 
-
+void USART1_init(void){
+	RCC->APB2ENR |= 1 << 14;
+	USART1->CR1 |= USART_CR1_TE;
+	USART1->CR1 |= USART_CR1_RE;
+	USART1->BRR |= 0x1A0;
+	USART1->CR2 &= ~(USART_CR2_LINEN | USART_CR2_CLKEN);
+	USART1->CR3 &= ~(USART_CR3_SCEN | USART_CR3_HDSEL | USART_CR3_IREN);
+	USART1->CR1 |= USART_CR1_UE;
+>>>>>>> Stashed changes
+}
+/*int UART_transmit(uint8_t *arr, uint32_t ){
+	while()
+}*/
+void USART_PutChar(uint8_t ch)
+{
+  while(!(USART1->ISR & (1<<7)));
+  USART1->TDR = ch;
+}
 int main(){
-	system_clock_config();
+	//system_clock_config();
 	GPIO_init();
+	USART1_init();
+	USART_PutChar('A');
+	//EXTI_Setup();
 
-	init_LCD();
-	EXTI_Setup();
-	// make symbol
-	write_to_LCD(0x40,1); //set CG RAM 0100 0000
-	write_to_LCD(0x04,0); //0000 0000
-	write_to_LCD(0x0E,0); // 0000 1110
-	write_to_LCD(0x0E,0); // 0001 0101
-	write_to_LCD(0x0E,0); // 00001 1111
-	write_to_LCD(0x1F,0); // 0001 0101
-	write_to_LCD(0x00,0); // 0001 1011
-	write_to_LCD(0x04,0); //0000 1110
-	write_to_LCD(0x00,0);
 
-	write_to_LCD(0x14,0); //0000 0000
-	write_to_LCD(0x03,0); // 0011 1110
-	write_to_LCD(0x1E,0); // 0001 0101
-	write_to_LCD(0x1F,0); // 00001 1111
-	write_to_LCD(0x07,0); // 0001 0101
-	write_to_LCD(0x0f,0); // 0001 1011
-	write_to_LCD(0x09,0); //0000 1110
-	write_to_LCD(0x09,0);
 
-	//
-	write_to_LCD(0x80,1);
-	OneWire_Init(&one_wire, GPIOD, 2);
-	systick_init();
+	//systick_init();
 
 }
 
